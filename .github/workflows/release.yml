@@ -1,0 +1,39 @@
+name: Automatic CD Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Creates both .zip and .tar.gz archives dynamically using the repository name,
+      # excluding hidden files and folders starting with a dot (.*)
+      - name: Package library
+        run: |
+          # Create ZIP archive
+          zip -r ${{ github.event.repository.name }}-${{ github.ref_name }}.zip . -x ".*" "*/.*"
+          
+          # Create TAR.GZ archive (using tar's exclude pattern to skip hidden files/dirs)
+          tar --exclude=".*" -czf ${{ github.event.repository.name }}-${{ github.ref_name }}.tar.gz .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.event.repository.name }}-${{ github.ref_name }}.zip
+            ${{ github.event.repository.name }}-${{ github.ref_name }}.tar.gz
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,16 @@
+# A native Gnuplot wrapper library for Open Object Rexx.
+
+package gnuplot
+version 0.1.0
+
+summary A native Gnuplot wrapper library for Open Object Rexx.
+
+description """
+A native wrapper library for interacting with Gnuplot from Open Object Rexx. It allows to easily generate plots, export graphics to several image formats or run real-time interactive sessions. Cross-platform support for Windows and POSIX operating systems.
+"""
+
+license Apache-2.0
+author Salvador Parra Camacho
+homepage https://github.com/sparrac/oorexx-gnuplot
+
+require oorexx >= 5.0
