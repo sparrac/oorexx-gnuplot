@@ -1,5 +1,5 @@
 #!/usr/bin/env rexx
--- simple_session.rex
+-- session_explicit_basic.rex
 -- Simple plotting with `GnuplotSession` class
 
 g = .GnuplotSession~new

@@ -1,5 +1,9 @@
 # oorexx-gnuplot
 
+<p align="center">
+  <img src="resources/logo.svg" alt="oorexx-gnuplot logo" width="420">
+</p>
+
 A native Gnuplot wrapper library for Open Object Rexx.
 
 ## Description
@@ -16,7 +20,7 @@ Gnuplot is a portable command-line program that can create 2D and 3D plots of fu
 
 ## Architecture
 
-The library implements two main independent classes located in two independent files. Those classes are designed for different workflows:
+The library implements two main independent classes located in two files. Each class targets a different workflow:
 
 - **`Gnuplot` (in `Gnuplot.rex`)**: for autonomous scripts and direct file exports.
 
@@ -28,8 +32,8 @@ The library implements two main independent classes located in two independent f
 
 ## Requirements
 
-- Open Object Rexx 4 or 5
-- Gnuplot
+- [Open Object Rexx](https://sourceforge.net/projects/oorexx/) 4 or 5
+- [Gnuplot](http://gnuplot.info/)
 
 ## Status
 
@@ -44,36 +48,19 @@ Some parts of the API may still benefit from minor polishing.
 
 ## Installation
 
-Assuming that:
+Copy `Gnuplot.rex` and `GnuplotSession.rex` to a directory included in your `REXX_PATH` (or `PATH`) and import it using the `requires` directive:
 
-- `~/cetros/` is a directory included in your `REXX_PATH` or `PATH` environment variables and
-- `~/project/` is where your script resides.
+~~~rexx
+::requires 'Gnuplot'
+::requires 'GnuplotSession'
+~~~
 
-you can import and use this library depending on where you choose to place `Gnuplot.rex` and/or `GnuplotSession.rex`. For example:
+Alternatively, load it as an external routine:
 
-1. In `~/cetros/`:
-
-   `::requires 'Gnuplot'`
-   
-   or
-   
-   `::requires 'GnuplotSession'`
-   
-2. In `~/cetros/plotting`:
-
-   `::requires 'plotting/Gnuplot'`
-   
-   or
-   
-   `::requires 'plotting/GnuplotSession'`
-
-3. In `~/project/`:
-
-   `::requires 'Gnuplot'`
-   
-   or
-   
-   `::requires 'GnuplotSession'`
+~~~rexx
+call 'Gnuplot'
+call 'GnuplotSession'
+~~~
 
 ## Quick Start
 
@@ -86,39 +73,60 @@ gp~grid   = 'xtics ytics'
 gp~xlabel = 'X Axis'
 gp~ylabel = 'Y Axis'
 
-index1 = gp~add('sin(x)')
-plot1 = gp~plots[index1]
+plot1 = gp~add('sin(x)')
 plot1~title = 'Sine'
 plot1~width = '2'
 plot1~with = 'lines'
 
-index2 = gp~add('cos(x)')
-plot2 = gp~plots[index2]
+plot2 = gp~add('cos(x)')
 plot2~title = 'Cosine'
 plot2~width = '1'
 plot2~with = 'points'
 
 gp~plot
 
-::requires 'GnuplotSession'
+::requires 'Gnuplot'
 ~~~
 
 ### `GnuplotSession` class example
 
 ~~~rexx
-g = .GnuplotSession~new
-g~open
+g = .GnuplotSession~new~~open
 
+-- Set properties dynamically
+g~grid  = ''
+g~size  = 'square'
+g~title = '"Interactive Session Example"'
+
+-- Dynamic method calls and animation loop
 do i = 1 to 4
-  g~command('plot sin('i'*x) title "' i '"')
-  call SysSleep 1
+  g~plot('sin('i'*x) title "sin('i'x)" lw 2 lc "purple"')
+  g~pause(1)
 end
 
-g~command('plot exp(x)')
+-- Unset properties dynamically
+g~grid = .nil
+
+-- Plot arrays directly using datablocks
+x = (1, 2, 3, 4, 5)
+y = (1, 4, 9, 16, 25)
+db = g~data(x, y)
+
+g~plot(db 'with linespoints pt 7 lw 2 title "x^2"')
+
 g~close
 
 ::requires 'GnuplotSession'
 ~~~
+
+## Examples
+
+The `examples/` directory contains additional runnable examples demonstrating the library's main features.
+
+- Files starting with `gnuplot` demonstrate the `Gnuplot` class.
+- Files starting with `session` demonstrate the `GnuplotSession` class:
+  - Files containing `explicit` use explicitly defined methods.
+  - Files containing `dynamic` showcase ooRexx's dynamic message dispatch (`unknown`).
 
 ## `Gnuplot` Class Reference
 
@@ -220,6 +228,24 @@ The `GnuplotSession` class (defined in `GnuplotSession.rex`) maintains a persist
 
 The following methods are shortcut helpers that prepend their respective Gnuplot keywords before sending the command string:
 
+- `data(content, [y_or_name], [name])`
+
+  Creates an inline Gnuplot datablock (`$data1`, `$data2`, etc.) directly in memory without writing temporary files to disk.
+
+  - **From two 1D Arrays:** `gp~data(x_array, y_array)`
+  - **From a 2D Matrix Array:** `gp~data(matrix)`
+  - **From a multiline String:** `gp~data(raw_string)`
+
+  **Returns:** The assigned datablock name string (e.g., `'$data1'`).
+  
+- `[]=(value, key)`
+
+  Syntactic sugar for configuring Gnuplot environment options using collection-style bracket notation:
+
+  - **Set Option with Value:** `g['title'] = '"My Title"'` (sends `set title "My Title"`)
+  - **Set Flag:** `g['grid'] = ''` (sends `set grid`)
+  - **Unset Option:** `g['grid'] = .nil` (sends `unset grid`)
+
 - `set(opt)`: Sends `set <opt>` (e.g., `session~set('grid')`).
 - `unset(opt)`: Sends `unset <opt>`.
 - `reset(opt)`: Sends `reset <opt>`.
@@ -227,9 +253,19 @@ The following methods are shortcut helpers that prepend their respective Gnuplot
 - `splot(args)`: Sends `splot <args>`.
 - `replot(args)`: Sends `replot <args>`.
 
+### Dynamic Command Dispatch (`unknown` Method)
+
+`GnuplotSession` intercepts unhandled messages using ooRexx's `unknown` mechanism to map native syntax directly to Gnuplot commands:
+
+- **Set property:** `gp~grid = ''` sends `set grid`
+- **Set property with value:** `gp~title = '"My Title"'` sends `set title "My Title"`
+- **Unset property:** `gp~grid = .nil` sends `unset grid`
+- **Dynamic methods:** `gp~pause(3)` sends `pause 3`
+- **Dynamic commands:** `gp~fit('f(x) $data1 via a, b')` sends `fit f(x) $data1 via a, b`
+
 ## License
 
-This project is distributed under the terms described in the `LICENSE` file.
+Distributed under the terms of the [LICENSE](LICENSE) file.
 
 ## Author
 

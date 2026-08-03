@@ -1,5 +1,5 @@
 #!/usr/bin/env rexx
--- outputs.rex
+-- gnuplot_outputs.rex
 -- Creates three different files for the same plot
 
 parse arg opt
@@ -20,8 +20,7 @@ gp~title  = 'Quadratic function'
 gp~grid   = 'xtics ytics'
 gp~xlabel = 'X'
 gp~ylabel = 'Y'
-i = gp~add('x**2')
-p = gp~plots[i]
+p = gp~add('x**2')
 p~title = 'x²'
 p~width = '1'
 p~with  = 'lines'

@@ -1,3 +1,18 @@
+/*
+ * Library:     oorexx-gnuplot: gnuplot for ooRexx
+ * File:        Gnuplot.rex
+ * Description: An object-oriented wrapper for Gnuplot in Open Object Rexx.
+ *              Provides a simple interface to generate 2D/3D plots from data
+ *              series (functions, arrays, files), configure output terminals
+ *              and export to graphic formats.
+ *
+ * Author:      Salvador Parra Camacho
+ * Version:     0.1.0
+ * Date('S'):   20260803
+ * License:     Apache 2.0
+ * Repository:  https://github.com/sparrac/oorexx-gnuplot
+ */
+ 
 ::class Gnuplot public
 
 ::method terminals attribute class
@@ -67,13 +82,17 @@
 
   if out = .nil then return
 
-  out_extension = out~substr(out~lastpos('.') + 1)~upper
+  dot_pos = out~lastpos('.')
+  
+  if dot_pos > 1 then do
+    out_extension = out~substr(out~lastpos('.') + 1)~upper
 
-  if self~class~terminals~hasindex(out_extension) then do
-		self~terminal = self~class~terminals~at(out_extension)
-		self~persist  = self~class~persist~at(out_extension)
-	end
-
+    if self~class~terminals~hasindex(out_extension) then do
+	  	self~terminal = self~class~terminals~at(out_extension)
+	  	self~persist  = self~class~persist~at(out_extension)
+	  end
+  end
+    
 ::method add
 
   series = .Directory~new
@@ -102,9 +121,10 @@
   series~width    = .nil
   series~with     = .nil
   series~color    = .nil
+  
+  index = self~plots~append(series)
 
-  -- Add the series to the plots array
-  return self~plots~append(series)
+  return self~plots[index]
 
 ::method script private
   use arg cmd
@@ -113,20 +133,17 @@
   s~append('# start of gnuplot script')
 
   quote_opt = .Directory~new
-  quote_opt~title    = .true
-  quote_opt~key      = .false
-  quote_opt~grid     = .false
-  quote_opt~width    = .false
-  quote_opt~height   = .false
-  quote_opt~xlabel   = .true
-  quote_opt~x2label  = .true
-  quote_opt~ylabel   = .true
-  quote_opt~y2label  = .true
-  quote_opt~terminal = .false
-  quote_opt~output   = .true
-
-  opts = 'title key grid width height xlabel x2label ylabel y2label terminal output'
-  quot = '1     0   0    0     0      1      1       1      1       0        1'
+  quote_opt['title']    = .true
+  quote_opt['key']      = .false
+  quote_opt['grid']     = .false
+  quote_opt['width']    = .false
+  quote_opt['height']   = .false
+  quote_opt['xlabel']   = .true
+  quote_opt['x2label']  = .true
+  quote_opt['ylabel']   = .true
+  quote_opt['y2label']  = .true
+  quote_opt['terminal'] = .false
+  quote_opt['output']   = .true
 
   -- Add gnuplot constants
   do i over self~constants
@@ -134,11 +151,11 @@
   end
 
   -- Add plot options
-  do i = 1 to opts~words
-  	opt = opts~word(i)
+  do opt over quote_opt
   	val = self~send(opt)
   	if val = .nil then iterate
-  	if quot~word(i) then
+    
+  	if quote_opt~at(opt) then
   		s~append('set' opt quote(val)) -- quoted
   	else
   		s~append('set' opt val) -- non quoted

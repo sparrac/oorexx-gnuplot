@@ -1,5 +1,5 @@
 #!/usr/bin/env rexx
--- multi_outputs.rex
+-- session_explicit_outputs.rex
 -- Creates 100 PNG files
 
 parse arg opt

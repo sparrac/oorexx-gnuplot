@@ -4,3 +4,10 @@
 *.png
 *.svg
 *.pdf
+
+# Keep project assets
+!resources/logo.svg
+!resources/social-preview.png
+
+# Ignore fit files
+fit.log

@@ -1,3 +1,18 @@
+/*
+ * Library:     oorexx-gnuplot: gnuplot for ooRexx
+ * File:        GnuplotSession.rex
+ * Description: Provides an interactive, persistent IPC session manager for
+ *              Gnuplot in Open Object Rexx. Enables real-time, bi-directional
+ *              command streaming via Unix FIFOs (named pipes) and Windows OLE
+ *              automation without generating temporary script files.
+ *
+ * Author:      Salvador Parra Camacho
+ * Version:     0.1.0
+ * Date('S'):   20260803
+ * License:     Apache 2.0
+ * Repository:  https://github.com/sparrac/oorexx-gnuplot
+ */
+ 
 ::class GnuplotSession public
 
 ::method init
@@ -91,7 +106,7 @@
 ::method replot
   parse arg command
   return self~command('replot' command)
-
+  
 ::method getPipeName private
 
   if self~iswindows then
@@ -100,3 +115,80 @@
     path = ''
 
   return SysTempFileName(path || 'gnuplotfifo.???')
+  
+::method "[]="
+  use arg val, key
+  key = key~lower
+  if val = .nil then return self~command('unset' key)
+  return self~command('set' key val)
+  
+::method unknown
+  use arg msg, args
+  
+  msg = msg~lower
+  
+  select
+  when msg~endsWith('='), args[1] \= .nil then
+    command = 'set' msg~left(msg~length - 1) args~tostring
+  when msg~endsWith('='), args[1] = .nil then
+    command = 'unset' msg~left(msg~length - 1)
+  otherwise
+    command = msg args~tostring
+  end
+
+  return self~command(command)
+
+::method data
+  expose counter
+  
+  if \datatype(counter, 'W') then
+    counter = 0
+  
+  -- Second argument exists and is an Array
+  if arg(2, 'E'), arg(2)~isA(.Array) then do
+    x = arg(1)
+    y = arg(2)
+    name = arg(3)
+    
+    block = .Array~new
+    minLen = min(x~items, y~items)
+    do i = 1 to minLen
+      block~append(x[i] y[i])
+    end
+  end
+  else do
+    block = arg(1)
+    name = arg(2)
+  end
+  
+  -- Third argument omitted
+  if arg(3, 'O') & (var('name') = 0  | name = '' | name = .nil) then do
+    counter += 1
+    name = '$data' || counter
+  end
+  else if \name~startsWith('$') then do
+    name = '$' || name
+  end
+  
+  -- Send data to gnuplot
+  self~command(name '<< EOD')
+  
+  -- The data block is an array
+  if block~isA(.Array) then do
+    do e over block
+      if e~isA(.Array) then -- Each element is an array
+        self~command(e~makearray~makestring(, ' '))
+      else
+        self~command(e)
+    end
+  end
+    
+  -- The data block is a string
+  else do
+    self~command(block)
+  end
+
+  -- End Of Data
+  self~command('EOD')
+  
+  return name
